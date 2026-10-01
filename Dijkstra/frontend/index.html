@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enrutamiento de Paquetes en Redes // Algoritmo de Dijkstra (DAG)</title>
+  
+  <!-- Google Fonts: Rajdhani & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Vis.js Network CDN -->
+  <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+
+  <!-- Estilos Consola Ciberseguridad / NOC -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- Top Header / NOC HUD Bar -->
+  <header class="noc-header">
+    <div class="noc-brand">
+      <div class="brand-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+          <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+          <line x1="6" y1="6" x2="6.01" y2="6"></line>
+          <line x1="6" y1="18" x2="6.01" y2="18"></line>
+        </svg>
+      </div>
+      <div>
+        <h1 class="brand-title">CYBERNET // NOC ROUTING SIMULATOR</h1>
+        <div class="brand-subtitle">ENRUTAMIENTO DE PAQUETES - DIJKSTRA STATE MACHINE (TOPOLOGÍA DAG)</div>
+      </div>
+    </div>
+
+    <div class="noc-status-bar">
+      <button id="btn-show-rubric" class="btn-cyber btn-cyber-info" title="Ver Justificación Matemática del DAG y Cumplimiento de Rúbricas">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+        Justificación DAG & Rúbrica
+      </button>
+      <div class="status-badge">
+        <div class="pulse-dot"></div>
+        <span>MOTOR DE RED ACTIVO</span>
+      </div>
+      <div class="status-badge">
+        <span style="color: var(--cyan-primary);">REGLA DE TRÁFICO:</span>
+        <span>DAG SIN CICLOS (n ∈ [7, 16])</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Toolbar de Configuración y Enrutamiento -->
+  <section class="noc-toolbar">
+    <!-- Grupo 1: Generación de Topología -->
+    <div class="toolbar-group">
+      <span class="tool-label">Routers:</span>
+      <select id="node-count-select" class="cyber-select">
+        <option value="7">7 Routers</option>
+        <option value="8">8 Routers</option>
+        <option value="9">9 Routers</option>
+        <option value="10" selected>10 Routers</option>
+        <option value="12">12 Routers</option>
+        <option value="14">14 Routers</option>
+        <option value="16">16 Routers</option>
+      </select>
+      <button id="btn-generate-dag" class="btn-cyber">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+        Generar Red DAG
+      </button>
+      <button id="btn-manual-mode" class="btn-cyber">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        Diseño Manual (DFS)
+      </button>
+      <button id="btn-show-matrix" class="btn-cyber">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg>
+        Matriz Adyacencia
+      </button>
+    </div>
+
+    <!-- Grupo 2: Selección Origen / Destino y Ejecución -->
+    <div class="toolbar-group">
+      <span class="tool-label">Router Origen:</span>
+      <select id="source-select" class="cyber-select"></select>
+
+      <span class="tool-label">Router Destino:</span>
+      <select id="target-select" class="cyber-select"></select>
+
+      <button id="btn-run-dijkstra" class="btn-cyber btn-cyber-primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Calcular Enrutamiento Óptimo
+      </button>
+    </div>
+  </section>
+
+  <!-- Workspace Principal (Lienzo Vis.js y Telemetría) -->
+  <main class="noc-workspace">
+    <!-- Lienzo de visualización Vis.js -->
+    <div class="canvas-container">
+      <div class="hud-corner hud-top-left"></div>
+      <div class="hud-corner hud-top-right"></div>
+      <div class="hud-corner hud-bottom-left"></div>
+      <div class="hud-corner hud-bottom-right"></div>
+
+      <!-- Banner HUD de Relajación de Enlace en Vivo -->
+      <div id="relaxation-hud-banner" class="relaxation-hud-banner">
+        <div class="hud-pill-tag">ESTADO DE ENRUTAMIENTO</div>
+        <div id="hud-banner-text" class="hud-banner-text">Esperando inicio de cálculo de rutas...</div>
+      </div>
+
+      <div id="network-canvas"></div>
+
+      <!-- Leyenda Visual de Red -->
+      <div class="canvas-legend">
+        <div class="legend-item">
+          <div class="legend-badge legend-eval"></div>
+          <span>Router en Evaluación / Inspección</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-badge legend-visit"></div>
+          <span>Router con Latencia Definitiva</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-badge legend-path"></div>
+          <span>Enlace(s) de Fibra Óptica Óptimos</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-badge legend-packet"></div>
+          <span>Paquete de Datos en Tránsito</span>
+        </div>
+      </div>
+
+      <!-- Botón de Simulación de Paquete -->
+      <div class="packet-launcher-bar">
+        <button id="btn-launch-packet" class="btn-cyber btn-cyber-packet" disabled title="Inyecta un paquete de datos para recorrer la ruta mínima en tiempo real">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+          Inyectar Paquete de Prueba
+        </button>
+      </div>
+
+      <!-- Barra flotante de reproducción paso a paso -->
+      <div class="player-dock">
+        <button id="btn-reset" class="btn-cyber" title="Reiniciar al paso 0">⏮ Inicio</button>
+        <button id="btn-prev" class="btn-cyber" title="Paso anterior">◀ Anterior</button>
+        <button id="btn-play" class="btn-cyber btn-cyber-warning" title="Auto-reproducción">
+          <span>▶</span> Auto
+        </button>
+        <button id="btn-next" class="btn-cyber btn-cyber-primary" title="Siguiente paso">Siguiente ▶</button>
+        <div id="step-display" class="step-indicator">Paso 0 / 0</div>
+
+        <div style="display:flex; align-items:center; gap:6px; margin-left:10px;">
+          <span style="font-size:0.7rem; color:var(--text-muted); font-family:var(--text-mono);">VEL:</span>
+          <input type="range" id="speed-slider" min="200" max="1500" step="100" value="700" style="width: 70px; accent-color: var(--cyan-primary);">
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel de Telemetría Lateral Derecho -->
+    <aside class="noc-telemetry">
+      <!-- Tarjetas de Métricas -->
+      <section class="telemetry-section">
+        <div class="section-header">
+          <span>Métricas de Enrutamiento</span>
+          <span id="metric-status" style="font-size:0.75rem; color:#849ab5;">STANDBY</span>
+        </div>
+        <div class="metrics-grid">
+          <div class="metric-card highlight">
+            <div class="metric-title">Latencia Mínima</div>
+            <div id="metric-distance" class="metric-value cyan">--</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-title">Caminos Mínimos</div>
+            <div id="metric-paths-count" class="metric-value yellow">--</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Rutas Mínimas Detectadas (ECMP) -->
+      <section class="telemetry-section">
+        <div class="section-header">
+          <span>Secuencia(s) Óptima(s) // Redundancia ECMP</span>
+          <button id="btn-show-all-paths" class="btn-micro" style="display:none;" title="Resalta todas las rutas óptimas a la vez">Ver Todas</button>
+        </div>
+        <div id="routes-container" class="routes-container">
+          <span style="color:#849ab5; font-size:0.78rem;">Ejecute Dijkstra para ver las rutas óptimas.</span>
+        </div>
+      </section>
+
+      <!-- Tabla de Ruteo en Tiempo Real -->
+      <section class="telemetry-section" style="flex: 1.2;">
+        <div class="section-header">
+          <span>Tabla de Ruteo (Relajación de Enlaces)</span>
+        </div>
+        <div class="table-container">
+          <table class="routing-table" id="routing-table">
+            <thead>
+              <tr>
+                <th>Router</th>
+                <th>Latencia</th>
+                <th>Predecesor(es)</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Filas generadas dinámicamente -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Consola de Eventos y Logs Monospace -->
+      <section class="telemetry-section terminal-container" style="flex: 1;">
+        <div class="section-header">
+          <span>Consola de Telemetría // Log de Máquina</span>
+        </div>
+        <div id="terminal-logs" class="terminal-logs">
+          <!-- Entradas del log generadas dinámicamente -->
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <!-- Modal para Construcción Manual de Grafo con Validación DFS -->
+  <div id="modal-manual" class="cyber-modal-overlay">
+    <div class="cyber-modal">
+      <div class="modal-header">
+        <h3 style="font-family: var(--font-display); color: #fff; font-size: 1.1rem; text-transform: uppercase;">
+          Diseño Manual de Red (Validación DFS)
+        </h3>
+        <button id="btn-close-modal" style="background:none; border:none; color:var(--text-muted); font-size:1.2rem; cursor:pointer;">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4;">
+          Defina entre 7 y 16 routers y los enlaces dirigidos con latencias positivas. El motor ejecutará una búsqueda DFS para certificar que la red sea un <strong>DAG</strong> libre de ciclos.
+        </p>
+
+        <div>
+          <label class="tool-label" style="display:block; margin-bottom:4px;">Nodos (uno por línea, ej: R01, R02):</label>
+          <textarea id="manual-nodes-input" class="cyber-input" style="width:100%; height:80px; resize:none;">R01
+R02
+R03
+R04
+R05
+R06
+R07</textarea>
+        </div>
+
+        <div>
+          <label class="tool-label" style="display:block; margin-bottom:4px;">Enlaces (origen, destino, latencia_ms):</label>
+          <textarea id="manual-edges-input" class="cyber-input" style="width:100%; height:110px; resize:none;">R01, R02, 5
+R01, R03, 8
+R02, R04, 6
+R03, R04, 3
+R02, R05, 12
+R04, R06, 7
+R05, R07, 4
+R06, R07, 9</textarea>
+        </div>
+
+        <div id="manual-validation-msg" style="font-family: var(--text-mono); font-size: 0.75rem; min-height: 20px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-apply-manual" class="btn-cyber btn-cyber-primary">Validar y Cargar Red</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para Visualización de Matriz de Adyacencia -->
+  <div id="modal-matrix" class="cyber-modal-overlay">
+    <div class="cyber-modal" style="width: 720px; max-width: 95vw;">
+      <div class="modal-header">
+        <h3 style="font-family: var(--font-display); color: #fff; font-size: 1.1rem; text-transform: uppercase;">
+          Matriz de Adyacencia (Latencias de Red en ms)
+        </h3>
+        <button id="btn-close-matrix" style="background:none; border:none; color:var(--text-muted); font-size:1.2rem; cursor:pointer;">&times;</button>
+      </div>
+      <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+        <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 12px;">
+          Representación matricial $N \times N$ del Grafo Dirigido Acíclico (DAG). Cada elemento $M[i][j]$ indica la latencia en milisegundos de la fibra óptica que conecta el Router $i$ con el Router $j$. Un valor $0$ indica ausencia de enlace directo. Nótese que al ser un DAG, es una <em>matriz triangular superior</em>.
+        </p>
+        <div id="matrix-container" style="overflow-x: auto;">
+          <!-- Tabla generada dinámicamente -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-copy-matrix-json" class="btn-cyber">Copiar JSON</button>
+        <button id="btn-close-matrix-footer" class="btn-cyber btn-cyber-primary">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Justificación Académica y Rúbricas de Matemática Computacional -->
+  <div id="modal-rubric" class="cyber-modal-overlay">
+    <div class="cyber-modal rubric-modal" style="width: 820px; max-width: 95vw;">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div class="brand-icon" style="width:24px; height:24px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          </div>
+          <h3 style="font-family: var(--font-display); color: #fff; font-size: 1.15rem; text-transform: uppercase;">
+            Fundamento Teórico & Alineación con Rúbrica
+          </h3>
+        </div>
+        <button id="btn-close-rubric" style="background:none; border:none; color:var(--text-muted); font-size:1.4rem; cursor:pointer;">&times;</button>
+      </div>
+      <div class="modal-body" style="max-height: 72vh; overflow-y: auto; gap: 18px;">
+        
+        <!-- Tarjeta 1: Justificación Matemática del DAG -->
+        <div class="rubric-card">
+          <div class="rubric-badge cyan">1. Justificación Matemática del DAG (Grafo Dirigido Acíclico)</div>
+          <h4 class="rubric-title">Topología de Redes de Computadoras y Prevención de Bucles</h4>
+          <p class="rubric-text">
+            La rúbrica de Matemática Computacional exige estrictamente que el grafo generado sea <strong>dirigido y no contenga ciclos (DAG)</strong>. En infraestructuras de red reales, esta restricción se justifica porque las <strong>políticas de firewall</strong> y los protocolos de enrutamiento (como OSPF sin bucles o Spanning Tree Protocol) fuerzan que el tráfico fluya en un sentido jerárquico estricto. Esto elimina activamente cualquier loop de capa 2/3 para evitar <em>tormentas de broadcast (broadcast storms)</em> y caídas del sistema.
+          </p>
+        </div>
+
+        <!-- Tarjeta 2: Manejo de Estructuras -->
+        <div class="rubric-card">
+          <div class="rubric-badge green">2. Manejo Eficiente de Estructuras (Backend Python)</div>
+          <h4 class="rubric-title">Matrices y Listas de Adyacencia en Tiempo de Ejecución</h4>
+          <p class="rubric-text">
+            La red se representa mediante una <strong>matriz de adyacencia triangular superior</strong> (propiedad canónica de los DAG ordenados topológicamente) y listas de adyacencia optimizadas. En cada paso, el backend captura un snapshot estructurado con el estado de las variables ($d(v)$, predecesores, visitados y aristas activas) operando como una <strong>máquina de estados finita</strong>.
+          </p>
+        </div>
+
+        <!-- Tarjeta 3: Dinámica de Visualización -->
+        <div class="rubric-card">
+          <div class="rubric-badge yellow">3. Claridad en la Visualización (Frontend JS e Interactividad)</div>
+          <h4 class="rubric-title">Simulación del Paquete de Datos y Relajación de Latencias</h4>
+          <p class="rubric-text">
+            El requerimiento de mostrar la ejecución paso a paso se modela ilustrando un <strong>paquete de datos descubriendo la ruta más rápida</strong>. Los routers cambian dinámicamente de color: <span style="color:var(--yellow-eval)">amarillo</span> mientras se inspeccionan y relajan sus enlaces de fibra óptica, y <span style="color:var(--green-visited)">verde</span> cuando su latencia se vuelve definitiva, mostrando visualmente cómo el valor pasa de <strong>infinito (&infin;) a un valor real finito</strong>.
+          </p>
+        </div>
+
+        <!-- Tarjeta 4: Resolución de Caminos Múltiples -->
+        <div class="rubric-card">
+          <div class="rubric-badge purple">4. Resolución de Caminos Múltiples y Redundancia</div>
+          <h4 class="rubric-title">Tolerancia a Fallos y Enrutamiento ECMP (Equal-Cost Multi-Path)</h4>
+          <p class="rubric-text">
+            En infraestructuras de telecomunicaciones, disponer de <strong>enlaces redundantes que cuesten exactamente lo mismo</strong> en latencia es un estándar de diseño para tolerancia a fallos y balanceo de carga (ECMP). El motor identifica todos los caminos mínimos alternativos de igual costo exacto, los contabiliza y permite resaltarlos tanto individualmente como en conjunto con animación de paquetes de datos.
+          </p>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button id="btn-close-rubric-footer" class="btn-cyber btn-cyber-primary">Entendido</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts de la Aplicación -->
+  <script src="js/api.js"></script>
+  <script src="js/graphRenderer.js"></script>
+  <script src="js/controller.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

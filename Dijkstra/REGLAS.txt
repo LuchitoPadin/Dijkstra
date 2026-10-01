@@ -1,0 +1,35 @@
+# Contexto Principal del Proyecto: Problema de Camino Mínimo (Dijkstra)
+
+## 1. Rol y Stack Tecnológico
+Actúa como un ingeniero de software senior experto en algoritmos de grafos y arquitecturas cliente-servidor.
+- **Backend:** Python (FastAPI o Flask). Encargado de toda la lógica matemática y generación de estructuras de datos.
+- **Frontend:** Vanilla JavaScript, HTML5, CSS3 y la librería Vis.js para el renderizado del grafo.
+- **Tema Visual y Conceptual:** Enrutamiento de paquetes en una red de computadoras. Los vértices (nodos) son Routers/Servidores y las aristas son enlaces de red de un solo sentido (fibra óptica). Los pesos representan la latencia en milisegundos. El diseño visual debe ser un panel de monitoreo de redes en modo oscuro (Dark Mode).
+
+## 2. Restricciones Matemáticas Inquebrantables
+- **Cantidad de nodos:** El grafo debe contener un número entero `n` donde n ∈ [7, 16][cite: 12].
+- **Estructura del Grafo:** Debe ser estrictamente un Grafo Dirigido Acíclico (DAG)[cite: 12]. No puede contener ciclos bajo ninguna circunstancia.
+- **Pesos:** Los valores de las aristas deben ser enteros positivos (latencia).
+
+## 3. Requerimientos Funcionales
+El sistema debe permitir lo siguiente:
+1. **Generación:** Elegir entre generar el grafo de forma aleatoria (garantizando matemáticamente que sea un DAG válido) o de forma manual[cite: 12].
+2. **Generación Manual:** Si el usuario elige creación manual, podrá definir conexiones y pesos[cite: 12]. El backend debe validar mediante Búsqueda en Profundidad (DFS) que no se introduzcan ciclos. Si se detecta un ciclo, debe bloquear la acción y retornar un error descriptivo.
+3. **Selección de Puntos:** Tras renderizar el grafo etiquetado, el sistema solicitará la selección de un vértice origen y un vértice destino[cite: 12].
+
+## 4. El Motor del Algoritmo (Crucial)
+El algoritmo de Dijkstra ejecutado en Python **NO** debe devolver simplemente la ruta final y el costo. Debe comportarse como una máquina de estados:
+- Debe guardar un "snapshot" (fotografía) del estado de las variables en cada iteración del bucle principal para mostrar detalladamente cada paso del procedimiento[cite: 12].
+- El endpoint devolverá un arreglo JSON con todos los pasos secuenciales. Cada paso incluirá:
+  - El etiquetado de los vértices y la actualización de las distancias mínimas[cite: 12].
+  - La selección de nodos visitados y las decisiones tomadas en esa iteración[cite: 12, 13].
+  - El registro de predecesores modificado para soportar múltiples caminos del mismo costo exacto.
+
+## 5. Interactividad del Frontend
+- La interfaz debe consumir el arreglo JSON devuelto por el backend.
+- Debe incluir controles de reproducción interactiva (Botones "Siguiente Paso", "Paso Anterior") para que el usuario avance de forma interactiva y observe el funcionamiento del algoritmo[cite: 13].
+- Durante cada paso, el lienzo (Vis.js) debe actualizar los colores de los nodos (ej. amarillo para el actual, verde para los ya evaluados) y una tabla lateral debe mostrar la relajación de las aristas (cambio de distancias).
+- Al finalizar, el sistema presentará la distancia mínima encontrada, la cantidad de caminos mínimos existentes y la secuencia de vértices de cada camino[cite: 13]. Estas rutas óptimas deben resaltarse visualmente sobre el grafo para facilitar su interpretación[cite: 13].
+
+## 6. Metodología de Trabajo Iterativa
+Trabajaremos por fases. No intentes programar toda la aplicación en una sola respuesta. Espera mis instrucciones específicas (ej. "Fase 1", "Fase 2") donde te indicaré en qué parte específica del código (Backend o Frontend) enfocarte.
